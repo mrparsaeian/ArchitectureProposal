@@ -1,0 +1,89 @@
+---
+- name: Configure Grafana Dashboard with PromQL Queries
+  hosts: localhost
+  become: yes
+  vars_files:
+    - env.txt
+
+  vars:
+    vault_address: "http://127.0.0.1:8200"  # Vault address
+    vault_token: "{{ lookup('env', 'VAULT_TOKEN') }}"  # Vault token (should be set in the environment)
+    vault_secret_path: "secret/grafana"  # Path in Vault where the password is stored
+
+  tasks:
+    - name: Retrieve Grafana password from Vault
+      hashivault_read:
+        url: "{{ vault_address }}"
+        token: "{{ vault_token }}"
+        secret: "{{ vault_secret_path }}"
+      register: grafana_vault
+
+    - name: Set Grafana password variable
+      set_fact:
+        grafana_password: "{{ grafana_vault.data.password }}"
+
+    - name: Install Grafana Collection
+      ansible.builtin.ansible_galaxy:
+        name: community.grafana
+        type: collection
+
+    - name: Create Grafana data source for Prometheus
+      community.grafana.grafana_datasource:
+        name: "Prometheus"
+        type: "prometheus"
+        url: "{{ prometheus_url }}"
+        basic_auth: yes
+        user: "{{ grafana_username }}"
+        password: "{{ grafana_password }}"
+        state: present
+
+    - name: Create Grafana dashboard
+      community.grafana.grafana_dashboard:
+        title: "Z-Score Anomaly Detection Dashboard"
+        user: "{{ grafana_username }}"
+        password: "{{ grafana_password }}"
+        url: "http://{{ grafana_host }}:3000"
+        dashboard:
+          rows:
+            - title: "CPU Usage Z-Score"
+              panels:
+                - title: "CPU Usage Z-Score"
+                  type: "graph"
+                  targets:
+                    - expr: |
+                        (
+                          avg_over_time(node_cpu_seconds_total{instance="my-instance", job="node-exporter", mode="idle"}[$__rate_interval])
+                          - avg_over_time(node_cpu_seconds_total{instance="my-instance", job="node-exporter", mode="idle"}[1d])
+                        ) / stddev_over_time(node_cpu_seconds_total{instance="my-instance", job="node-exporter", mode="idle"}[1d])
+                      legendFormat: "CPU Z-Score"
+                      refId: "A"
+                  datasource: "Prometheus"
+
+            - title: "Memory Usage Z-Score"
+              panels:
+                - title: "Memory Usage Z-Score"
+                  type: "graph"
+                  targets:
+                    - expr: |
+                        (
+                          avg_over_time(node_memory_MemAvailable_bytes{instance="my-instance", job="node-exporter"}[$__rate_interval])
+                          - avg_over_time(node_memory_MemAvailable_bytes{instance="my-instance", job="node-exporter"}[1d])
+                        ) / stddev_over_time(node_memory_MemAvailable_bytes{instance="my-instance", job="node-exporter"}[1d])
+                      legendFormat: "Memory Z-Score"
+                      refId: "B"
+                  datasource: "Prometheus"
+
+            - title: "Network Ingress Z-Score"
+              panels:
+                - title: "Network Ingress Z-Score"
+                  type: "graph"
+                  targets:
+                    - expr: |
+                        (
+                          avg_over_time(node_network_receive_bytes_total{instance="my-instance", job="node-exporter"}[$__rate_interval])
+                          - avg_over_time(node_network_receive_bytes_total{instance="my-instance", job="node-exporter"}[1d])
+                        ) / stddev_over_time(node_network_receive_bytes_total{instance="my-instance", job="node-exporter"}[1d])
+                      legendFormat: "Network Ingress Z-Score"
+                      refId: "C"
+                  datasource: "Prometheus"
+        overwrite: true
