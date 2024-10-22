@@ -1,0 +1,74 @@
+---
+- name: Configure Link Aggregation for HP ESXi Servers and Cisco Nexus N3K using Vault for credentials
+  hosts: all
+  gather_facts: no
+  connection: network_cli
+  become: yes
+  collections:
+    - community.vmware
+    - cisco.nxos
+    - ansible.hashivault
+
+  vars:
+    vault_address: "http://127.0.0.1:8200"
+    vault_token: "{{ lookup('env', 'VAULT_TOKEN') }}"  # Vault token as an environment variable
+
+  tasks:
+    - name: Retrieve ESXi credentials from Vault
+      hashivault_read:
+        url: "{{ vault_address }}"
+        token: "{{ vault_token }}"
+        secret: "secret/esxi"
+      register: esxi_vault
+
+    - name: Retrieve Cisco Nexus credentials from Vault
+      hashivault_read:
+        url: "{{ vault_address }}"
+        token: "{{ vault_token }}"
+        secret: "secret/nexus"
+      register: nexus_vault
+
+    - name: Set ESXi and Nexus credentials as variables
+      set_fact:
+        esxi_password: "{{ esxi_vault.data.root_password }}"
+        nexus_username: "{{ nexus_vault.data.username }}"
+        nexus_password: "{{ nexus_vault.data.password }}"
+
+    - name: Configure ESXi Link Aggregation (LACP)
+      community.vmware.vmware_host_network:
+        hostname: "{{ inventory_hostname }}"
+        username: "root"
+        password: "{{ esxi_password }}"
+        validate_certs: no
+        switch_type: vds
+        switch_name: "vSwitch-LACP"
+        link_aggregation:
+          active_uplinks: 
+            - "vmnic1"
+            - "vmnic2"
+          lacp_mode: "active"
+          lag_name: "LAG_10G"
+      when: "'esxi' in group_names"
+
+    - name: Create Port-Channel on Cisco Nexus
+      nxos_interface:
+        name: port-channel20
+        mode: trunk
+        enabled: yes
+      when: "'nexus_switch' in group_names"
+      vars:
+        ansible_user: "{{ nexus_username }}"
+        ansible_password: "{{ nexus_password }}"
+
+    - name: Add Physical Interfaces to Port-Channel (Link Aggregation)
+      nxos_portchannel:
+        interface: "{{ item }}"
+        group: 20
+        mode: active
+      loop:
+        - Ethernet1/1
+        - Ethernet1/2
+      when: "'nexus_switch' in group_names"
+      vars:
+        ansible_user: "{{ nexus_username }}"
+        ansible_password: "{{ nexus_password }}"
