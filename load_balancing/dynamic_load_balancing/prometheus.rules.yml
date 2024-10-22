@@ -1,0 +1,11 @@
+groups:
+  - name: vm-alerts
+    rules:
+      - alert: HighCPUUsage
+        expr: avg_over_time(node_cpu_seconds_total{mode="user"}[5m]) > 0.8
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage detected on {{ $labels.instance }}"
+          description: "The instance {{ $labels.instance }} has high CPU usage."

@@ -1,0 +1,34 @@
+---
+- name: Install Istio on Kubernetes
+  hosts: localhost
+  tasks:
+    - name: Download Istio
+      shell: |
+        curl -L https://istio.io/downloadIstio | ISTIO_VERSION=1.18.0 sh -
+      args:
+        chdir: /tmp
+      register: istio_output
+
+    - name: Set Istio path
+      set_fact:
+        istio_home: "/tmp/{{ istio_output.stdout_lines[-1].split('/')[-1] }}"
+
+    - name: Install Istio CLI
+      shell: |
+        sudo cp {{ istio_home }}/bin/istioctl /usr/local/bin/istioctl
+
+    - name: Verify Istio CLI installation
+      command: istioctl version
+      register: istio_version_output
+    - debug:
+        var: istio_version_output
+
+    - name: Install Istio base components
+      shell: |
+        istioctl install --set profile=default -y
+      args:
+        chdir: "{{ istio_home }}/bin"
+    
+    - name: Label the namespace for Istio injection
+      shell: |
+        kubectl label namespace default istio-injection=enabled --overwrite

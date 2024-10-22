@@ -1,0 +1,25 @@
+---
+- name: Adjust HAProxy Load Balancer Configuration
+  hosts: haproxy_servers
+  become: yes
+
+  vars:
+    instance_to_remove: "{{ instance }}"
+
+  tasks:
+    - name: Backup original HAProxy configuration
+      copy:
+        src: /etc/haproxy/haproxy.cfg
+        dest: /etc/haproxy/haproxy.cfg.bak
+        remote_src: yes
+
+    - name: Remove the alerted instance from HAProxy backend
+      lineinfile:
+        path: /etc/haproxy/haproxy.cfg
+        regexp: '^\s*server\s+{{ instance_to_remove }}.*$'
+        state: absent
+
+    - name: Restart HAProxy to apply changes
+      systemd:
+        name: haproxy
+        state: restarted

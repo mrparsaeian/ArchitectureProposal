@@ -1,0 +1,4 @@
+receivers:
+  - name: 'webhook_receiver'
+    webhook_configs:
+      - url: 'http://your_webhook_server/alert'
