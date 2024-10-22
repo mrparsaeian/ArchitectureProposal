@@ -1,0 +1,68 @@
+---
+- name: Configure VRRP, HSRP, and Link Aggregation on Cisco Nexus N3K
+  hosts: localhost
+  become: yes
+  vars_files:
+    - env.yml
+
+  vars:
+    vault_address: "http://127.0.0.1:8200"
+    vault_token: "{{ lookup('env', 'VAULT_TOKEN') }}"
+    vault_secret_path: "secret/network_device_passwords"
+
+  tasks:
+    - name: Retrieve device password from Vault
+      hashivault_read:
+        url: "{{ vault_address }}"
+        token: "{{ vault_token }}"
+        secret: "{{ vault_secret_path }}"
+      register: nexus_password
+
+    - name: Set Nexus password variable
+      set_fact:
+        nexus_password: "{{ nexus_password.data.password }}"
+
+    - name: Configure link aggregation on Cisco Nexus
+      cisco.nxos.nxos_l2_interface:
+        interface: "{{ item }}"
+        channel_group:
+          id: 1
+          mode: active
+        state: present
+        host: "{{ nexus_host }}"
+        username: "admin"
+        password: "{{ nexus_password }}"
+      loop: "{{ interface_links }}"
+    
+    - name: Configure port-channel on Cisco Nexus
+      cisco.nxos.nxos_l3_interface:
+        interface: "port-channel1"
+        description: "Link Aggregation for redundancy"
+        enabled: true
+        state: present
+        host: "{{ nexus_host }}"
+        username: "admin"
+        password: "{{ nexus_password }}"
+
+    - name: Configure VRRP on Cisco Nexus
+      cisco.nxos.nxos_vrrp:
+        interface: "port-channel1"
+        group: "{{ vrrp_group_id }}"
+        vip: "{{ virtual_ip }}"
+        priority: "{{ primary_router_priority }}"
+        host: "{{ nexus_host }}"
+        username: "admin"
+        password: "{{ nexus_password }}"
+        state: present
+
+    - name: Configure HSRP on Cisco Nexus
+      cisco.nxos.nxos_hsrp:
+        interface: "port-channel1"
+        group: "{{ hsrp_group_id }}"
+        vip: "{{ virtual_ip }}"
+        priority: "{{ standby_router_priority }}"
+        version: 2
+        host: "{{ nexus_host }}"
+        username: "admin"
+        password: "{{ nexus_password }}"
+        state: present

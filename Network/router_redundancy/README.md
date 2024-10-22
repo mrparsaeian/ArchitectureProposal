@@ -105,3 +105,96 @@ This guide will cover the following steps:
 3. **Scalable and Repeatable**:
     
     * The use of Ansible allows the configuration to be easily scaled to additional Cisco Nexus switches, ensuring a repeatable and automated approach to network configuration.
+
+
+### Overview
+
+1. **Link Aggregation**: Combining four `10G` Ethernet links to increase throughput and redundancy.
+2. **VRRP (Virtual Router Redundancy Protocol)**: Establishing a virtual router with multiple physical routers to ensure failover capabilities.
+3. **HSRP (Hot Standby Router Protocol)**: Adding redundancy for routers, providing high availability by automatically switching to a standby router.
+4. **Ansible Playbook**: Automate the entire configuration process.
+5. **HashiCorp Vault**: Used to securely store the Cisco Nexus device passwords.
+
+### Step-by-Step Instructions
+
+#### 1. **Prerequisites**
+
+* **Cisco Nexus N3K Switch**: Ensure Cisco Nexus switches are reachable over the network.
+* **Ansible**: Install Ansible on your management server.
+* **Ansible Cisco NX-OS Collection**: Install the Cisco NX-OS collection with:
+    
+    ```bash
+    ansible-galaxy collection install cisco.nxos
+    ```
+    
+* **HashiCorp Vault**: Make sure HashiCorp Vault is set up, and passwords are securely stored.
+
+#### 2. **Set Up Environment Variables**
+
+* Create an environment file (`env.yml`) to store configuration variables:
+    * `nexus_host`: IP address of the Cisco Nexus switch.
+    * `interface_links`: A list of the four 10G interfaces to be bundled.
+    * `vrrp_group_id`: The VRRP group identifier.
+    * `hsrp_group_id`: The HSRP group identifier.
+    * `virtual_ip`: The virtual IP address used by both VRRP and HSRP.
+    * `primary_router_priority` and `standby_router_priority`: Priority values for determining primary and standby routers.
+
+#### 3. **Create an Ansible Playbook**
+
+Create an Ansible playbook to automate the configuration of link aggregation, VRRP, and HSRP.
+
+* **Vault Integration**: Use Ansible to retrieve the Cisco Nexus password from Vault securely.
+* **Link Aggregation**:
+    * Configure **link aggregation** by bundling four interfaces into a **port-channel**.
+    * Set the mode for the link aggregation to `active`.
+* **Port-Channel Configuration**:
+    * Set up a **port-channel** interface (`port-channel1`) that aggregates the four 10G links.
+    * Configure **Layer 3** settings on the `port-channel` to allow routing.
+* **VRRP Configuration**:
+    * Configure **VRRP** on the `port-channel` interface.
+    * Set the **VRRP group ID**, **virtual IP address**, and **router priority** to determine the primary router.
+* **HSRP Configuration**:
+    * Configure **HSRP** on the `port-channel` interface.
+    * Set the **HSRP group ID**, **virtual IP address**, and **router priority** to ensure a failover mechanism.
+
+#### 4. **Using HashiCorp Vault for Passwords**
+
+* **Password Storage**: Store the Cisco Nexus password securely in HashiCorp Vault under a specific path (e.g., `secret/network_device_passwords`).
+* **Password Retrieval**:
+    * The Ansible playbook must have a task to connect to Vault and retrieve the stored password using the **Vault token**.
+    * Set the Vault token in the environment before running the playbook to allow secure retrieval.
+
+#### 5. **Running the Playbook**
+
+* **Vault Token**:
+    * Export the Vault token to the environment so that the playbook can authenticate with Vault:
+        
+        ```bash
+        export VAULT_TOKEN="your-vault-token"
+        ```
+        
+* **Run the Playbook**:
+    * Execute the playbook to configure VRRP, HSRP, and link aggregation on the Cisco Nexus N3K:
+        
+        ```bash
+        ansible-playbook configure_vrrp_hsrp_linkagg.yml
+        ```
+        
+* **Verification**:
+    * Ensure all tasks complete successfully.
+    * Check the configuration on the Cisco Nexus N3K switches to verify that the VRRP, HSRP, and link aggregation settings are correctly applied.
+
+### Summary
+
+1. **Link Aggregation Configuration**:
+    * Combine four `10G` interfaces to create a **port-channel** for redundancy and higher throughput.
+2. **VRRP Setup**:
+    * Configure **VRRP** on the `port-channel` to ensure router redundancy.
+    * Set priority values to determine the **primary router**.
+3. **HSRP Setup**:
+    * Configure **HSRP** to complement VRRP for additional redundancy and failover.
+    * Set up the **standby router** with appropriate priorities.
+4. **Secure Password Management**:
+    * Use **HashiCorp Vault** to securely store and retrieve the Cisco Nexus device password.
+5. **Automate with Ansible**:
+    * Create an Ansible playbook that integrates with Vault to automate the entire process.
