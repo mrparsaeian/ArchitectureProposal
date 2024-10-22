@@ -1,0 +1,38 @@
+---
+- name: Configure DHCP Server for ESXi IP Assignment with MAC Filtering
+  hosts: localhost
+  become: yes
+  vars_files:
+    - vars.yml
+
+  tasks:
+    - name: Install DHCP Server
+      apt:
+        name: isc-dhcp-server
+        state: present
+        update_cache: yes
+
+    - name: Create DHCP configuration directory if it doesn't exist
+      file:
+        path: /etc/dhcp
+        state: directory
+
+    - name: Configure DHCP server with static reservations and deny foreign MACs
+      template:
+        src: dhcpd.conf.j2
+        dest: /etc/dhcp/dhcpd.conf
+        owner: root
+        group: root
+        mode: 0644
+
+    - name: Ensure the ISC DHCP server runs and deny unknown clients
+      lineinfile:
+        path: /etc/default/isc-dhcp-server
+        regexp: '^INTERFACESv4='
+        line: 'INTERFACESv4="eth0"'  # Change "eth0" to match your server's interface name
+        state: present
+
+    - name: Restart DHCP server to apply changes
+      systemd:
+        name: isc-dhcp-server
+        state: restarted

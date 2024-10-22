@@ -1,0 +1,28 @@
+# vars.yml
+
+esxi_servers:
+  - name: esxi1
+    mac_address: "00:1A:2B:3C:4D:5E"
+    ip_address: "10.0.0.11"
+  - name: esxi2
+    mac_address: "00:1A:2B:3C:4D:5F"
+    ip_address: "10.0.0.12"
+  - name: esxi3
+    mac_address: "00:1A:2B:3C:4D:60"
+    ip_address: "10.0.0.13"
+  - name: esxi4
+    mac_address: "00:1A:2B:3C:4D:61"
+    ip_address: "10.0.0.14"
+  - name: esxi5
+    mac_address: "00:1A:2B:3C:4D:62"
+    ip_address: "10.0.0.15"
+  - name: esxi6
+    mac_address: "00:1A:2B:3C:4D:63"
+    ip_address: "10.0.0.16"
+
+dhcp_subnet: "10.0.0.0"
+dhcp_netmask: "255.255.255.0"
+dhcp_range_start: "10.0.0.100"
+dhcp_range_end: "10.0.0.150"
+dhcp_routers: "10.0.0.1"
+dhcp_dns_servers: "10.0.0.2, 10.0.0.3"  # Use local DNS servers

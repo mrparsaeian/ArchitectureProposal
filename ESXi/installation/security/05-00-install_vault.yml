@@ -1,0 +1,116 @@
+---
+- name: Install and Configure HashiCorp Vault on Local Host
+  hosts: local
+  become: yes
+  tasks:
+    - name: Update APT cache
+      apt:
+        update_cache: yes
+
+    - name: Install dependencies
+      apt:
+        name:
+          - curl
+          - gnupg
+          - apt-transport-https
+        state: present
+
+    - name: Add HashiCorp GPG Key
+      apt_key:
+        url: https://apt.releases.hashicorp.com/gpg
+        state: present
+
+    - name: Add HashiCorp repository
+      apt_repository:
+        repo: "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com {{ ansible_distribution_release }} main"
+        filename: hashicorp
+        state: present
+
+    - name: Update APT and install Vault
+      apt:
+        name: vault
+        state: present
+        update_cache: yes
+
+    - name: Create Vault configuration directory
+      file:
+        path: /etc/vault.d
+        state: directory
+        owner: vault
+        group: vault
+        mode: '0755'
+
+    - name: Create Vault configuration file
+      copy:
+        dest: /etc/vault.d/vault-config.hcl
+        content: |
+          storage "file" {
+            path = "/opt/vault/data"
+          }
+
+          listener "tcp" {
+            address     = "0.0.0.0:8200"
+            tls_disable = 1
+          }
+
+          ui = true
+        owner: vault
+        group: vault
+        mode: '0644'
+
+    - name: Create Vault data directory
+      file:
+        path: /opt/vault/data
+        state: directory
+        owner: vault
+        group: vault
+        mode: '0755'
+
+    - name: Create Vault systemd service file
+      copy:
+        dest: /etc/systemd/system/vault.service
+        content: |
+          [Unit]
+          Description=HashiCorp Vault
+          Documentation=https://www.vaultproject.io/docs/
+          After=network.target
+
+          [Service]
+          User=vault
+          Group=vault
+          ProtectSystem=full
+          ProtectHome=read-only
+          PrivateTmp=yes
+          ProtectControlGroups=yes
+          ProtectKernelModules=yes
+          ProtectKernelLogs=yes
+          ProtectClock=yes
+          RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+          NoNewPrivileges=yes
+          ExecStart=/usr/bin/vault server -config=/etc/vault.d/vault-config.hcl
+          ExecReload=/bin/kill --signal HUP $MAINPID
+          KillMode=process
+          KillSignal=SIGINT
+          Restart=on-failure
+          RestartSec=5
+          TimeoutStopSec=30
+          LimitNOFILE=65536
+          LimitMEMLOCK=infinity
+          TasksMax=infinity
+          StartLimitInterval=60
+          StartLimitBurst=3
+
+          [Install]
+          WantedBy=multi-user.target
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Reload systemd daemon
+      command: systemctl daemon-reload
+
+    - name: Enable and start Vault service
+      systemd:
+        name: vault
+        enabled: yes
+        state: started

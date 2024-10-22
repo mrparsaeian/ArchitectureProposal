@@ -1,0 +1,52 @@
+---
+- name: Install ESXi 8 on HP DL380 G10 Servers via iLO using Vault
+  hosts: ilo_servers
+  become: false
+  gather_facts: no
+  vars_files:
+    - vars.yml
+
+  vars:
+    vault_addr: "http://127.0.0.1:8200"  # Address of your Vault server
+    vault_token: "your_vault_token"       # The Vault token to authenticate
+
+  tasks:
+    - name: Fetch iLO credentials from Vault
+      set_fact:
+        ilo_user: "{{ lookup('community.hashi_vault.hashi_vault', 'secret/{{ inventory_hostname }}:ilo_user', token=vault_token, url=vault_addr) }}"
+        ilo_password: "{{ lookup('community.hashi_vault.hashi_vault', 'secret/{{ inventory_hostname }}:ilo_password', token=vault_token, url=vault_addr) }}"
+
+    - name: Connect to iLO and insert the installation ISO
+      community.hpilo.hpilo_boot:
+        host: "{{ ansible_host }}"
+        login: "{{ ilo_user }}"
+        password: "{{ ilo_password }}"
+        media: "cdrom"
+        iso_url: "{{ esxi_iso_url }}"
+        state: present
+
+    - name: Set the server to boot from virtual CD/DVD
+      community.hpilo.hpilo_boot:
+        host: "{{ ansible_host }}"
+        login: "{{ ilo_user }}"
+        password: "{{ ilo_password }}"
+        boot_device: "cdrom"
+        persistent: yes
+
+    - name: Power cycle the server to begin installation
+      community.hpilo.hpilo_power:
+        host: "{{ ansible_host }}"
+        login: "{{ ilo_user }}"
+        password: "{{ ilo_password }}"
+        state: power_cycle
+
+    - name: Wait for server to boot from ISO
+      pause:
+        minutes: 10
+
+    - name: Verify ESXi installation completion
+      community.general.wait_for:
+        host: "{{ ansible_host }}"
+        port: 22
+        state: started
+        delay: 600

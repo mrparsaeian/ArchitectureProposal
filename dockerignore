@@ -1,0 +1,34 @@
+# Ignore Python bytecode
+__pycache__/
+*.pyc
+*.pyo
+
+# Ignore virtual environment directory
+venv/
+.env/
+
+# Ignore local configuration files
+*.ini
+*.cfg
+*.local
+.secret.key
+
+# Ignore logs
+*.log
+
+# Ignore the Vault password file
+vault_password.txt
+
+# Ignore temporary and backup files
+*.tmp
+*.bak
+*.swp
+
+# Ignore requirements.txt to prevent rebuilding if it changes
+requirements.txt
+
+# Ignore Dockerfile itself
+Dockerfile
+
+# Ignore Git folder
+.git/

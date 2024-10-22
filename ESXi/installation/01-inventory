@@ -1,0 +1,2 @@
+[esxi_hosts]
+192.168.1.100 ansible_user=root ansible_password=YourRootPassword ansible_connection=ssh

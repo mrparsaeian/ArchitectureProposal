@@ -1,0 +1,57 @@
+---
+- name: Configure ESXi Host
+  hosts: esxi_hosts
+  gather_facts: no
+  tasks:
+    - name: Set the hostname
+      community.vmware.vmware_host:
+        hostname: "{{ inventory_hostname }}"
+        username: "{{ ansible_user }}"
+        password: "{{ ansible_password }}"
+        validate_certs: no
+        cluster_name: "ClusterName"
+        esxi_hostname: "esxi01.localdomain"
+        state: present
+
+    - name: Configure NTP settings
+      community.vmware.vmware_host_ntp:
+        hostname: "{{ inventory_hostname }}"
+        username: "{{ ansible_user }}"
+        password: "{{ ansible_password }}"
+        validate_certs: no
+        ntp_servers:
+          - "time.google.com"
+          - "time.cloudflare.com"
+        state: present
+
+    - name: Create a VMFS datastore
+      community.vmware.vmware_datastore:
+        hostname: "{{ inventory_hostname }}"
+        username: "{{ ansible_user }}"
+        password: "{{ ansible_password }}"
+        validate_certs: no
+        datastore_name: "datastore1"
+        disk: "naa.600508b1001c6c45e3e35e3d8e2a111d"
+        state: present
+
+    - name: Set up standard vSwitch
+      community.vmware.vmware_vswitch:
+        hostname: "{{ inventory_hostname }}"
+        username: "{{ ansible_user }}"
+        password: "{{ ansible_password }}"
+        validate_certs: no
+        switch_name: "vSwitch0"
+        num_ports: 128
+        mtu: 1500
+        state: present
+
+    - name: Create a VM port group
+      community.vmware.vmware_portgroup:
+        hostname: "{{ inventory_hostname }}"
+        username: "{{ ansible_user }}"
+        password: "{{ ansible_password }}"
+        validate_certs: no
+        portgroup_name: "VM Network"
+        switch_name: "vSwitch0"
+        vlan_id: 0
+        state: present

@@ -1,0 +1,30 @@
+---
+- name: Install ESXi on HP Servers using iLO REST API
+  hosts: hp_servers
+  become: yes
+  vars_files:
+    - vars.yml
+
+  tasks:
+    - name: Install required Python packages
+      apt:
+        name:
+          - python3
+          - python3-pip
+        state: present
+
+    - name: Install Redfish Python library
+      pip:
+        name: redfish
+        state: present
+
+    - name: Copy Python script to remote server
+      copy:
+        src: mount_esxi_iso.py
+        dest: /tmp/mount_esxi_iso.py
+        mode: '0755'
+
+    - name: Mount ESXi ISO and reboot server
+      command: >
+        python3 /tmp/mount_esxi_iso.py
+        "{{ ilo_ip }}" "{{ ansible_user }}" "{{ ansible_password }}" "{{ esxi_iso_url }}"

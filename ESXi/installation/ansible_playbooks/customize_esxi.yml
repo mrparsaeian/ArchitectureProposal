@@ -1,0 +1,22 @@
+---
+- name: Customize ESXi ISO for HP Servers
+  hosts: localhost
+  gather_facts: no
+  vars_files:
+    - .passwords_decrypted
+
+  tasks:
+    - name: Customize ESXi ISO for each server
+      command: >
+        python3 customize_esxi_iso.py
+        /path/to/original_esxi.iso
+        /path/to/output/esxi_{{ inventory_hostname }}.iso
+        {{ root_password }}
+        {{ ip_address }}
+      loop:
+        - { inventory_hostname: "ESXi Host 1", root_password: "{{ ilo_password1 }}", ip_address: "10.0.0.1" }
+        - { inventory_hostname: "ESXi Host 2", root_password: "{{ ilo_password2 }}", ip_address: "10.0.1.1" }
+        - { inventory_hostname: "ESXi Host 3", root_password: "{{ ilo_password3 }}", ip_address: "10.0.2.1" }
+        - { inventory_hostname: "ESXi Host 4", root_password: "{{ ilo_password4 }}", ip_address: "10.0.3.1" }
+        - { inventory_hostname: "ESXi Host 5", root_password: "{{ ilo_password5 }}", ip_address: "10.0.4.1" }
+        - { inventory_hostname: "ESXi Host 6", root_password: "{{ ilo_password6 }}", ip_address: "10.0.5.1" }

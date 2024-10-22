@@ -1,0 +1,43 @@
+---
+- name: Install ESXi 8 on HP DL380 G10 Servers via iLO
+  hosts: ilo_servers
+  become: false
+  gather_facts: no
+  vars_files:
+    - vars.yml
+
+  tasks:
+    - name: Connect to iLO and insert the installation ISO
+      community.hpilo.hpilo_boot:
+        host: "{{ ansible_host }}"
+        login: "{{ ansible_user }}"
+        password: "{{ ansible_password }}"
+        media: "cdrom"
+        iso_url: "{{ esxi_iso_url }}"
+        state: present
+
+    - name: Set the server to boot from virtual CD/DVD
+      community.hpilo.hpilo_boot:
+        host: "{{ ansible_host }}"
+        login: "{{ ansible_user }}"
+        password: "{{ ansible_password }}"
+        boot_device: "cdrom"
+        persistent: yes
+
+    - name: Power cycle the server to begin installation
+      community.hpilo.hpilo_power:
+        host: "{{ ansible_host }}"
+        login: "{{ ansible_user }}"
+        password: "{{ ansible_password }}"
+        state: power_cycle
+
+    - name: Wait for server to boot from ISO
+      pause:
+        minutes: 10
+
+    - name: Verify ESXi installation completion
+      community.general.wait_for:
+        host: "{{ ansible_host }}"
+        port: 22
+        state: started
+        delay: 600
