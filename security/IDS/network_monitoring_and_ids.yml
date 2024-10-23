@@ -1,0 +1,109 @@
+---
+- name: Set up Network Monitoring and Intrusion Detection System
+  hosts: localhost
+  become: yes
+  vars_files:
+    - env.yml
+
+  vars:
+    vault_address: "http://127.0.0.1:8200"
+    vault_token: "{{ lookup('env', 'VAULT_TOKEN') }}"
+    vault_secret_path: "secret/network_device_passwords"
+
+  tasks:
+    - name: Retrieve credentials from Vault
+      hashivault_read:
+        url: "{{ vault_address }}"
+        token: "{{ vault_token }}"
+        secret: "{{ vault_secret_path }}"
+      register: passwords
+
+    - name: Set credentials variables
+      set_fact:
+        grafana_password: "{{ passwords.data.grafana_password }}"
+        snort_password: "{{ passwords.data.snort_password }}"
+
+    - name: Install Snort
+      apt:
+        name: snort
+        state: present
+
+    - name: Configure Snort
+      template:
+        src: snort.conf.j2
+        dest: /etc/snort/snort.conf
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Enable Snort to run as a service
+      systemd:
+        name: snort
+        enabled: yes
+        state: started
+
+    - name: Install Prometheus Node Exporter
+      apt:
+        name: prometheus-node-exporter
+        state: present
+
+    - name: Create Prometheus job configuration for Snort
+      copy:
+        dest: /etc/prometheus/prometheus.yml
+        content: |
+          global:
+            scrape_interval: 15s
+
+          scrape_configs:
+            - job_name: 'snort_logs'
+              static_configs:
+                - targets: ['localhost:9100']
+                  labels:
+                    service: snort
+
+            - job_name: 'node_exporter'
+              static_configs:
+                - targets: ['localhost:9100']
+        owner: prometheus
+        group: prometheus
+        mode: '0644'
+
+    - name: Reload Prometheus configuration
+      command: systemctl reload prometheus
+
+    - name: Configure Grafana Dashboards for Snort Monitoring
+      community.grafana.grafana_dashboard:
+        title: "Snort Intrusion Detection and Network Metrics"
+        user: "{{ grafana_username }}"
+        password: "{{ grafana_password }}"
+        url: "http://{{ grafana_host }}:3000"
+        dashboard:
+          rows:
+            - title: "Intrusion Detection Logs"
+              panels:
+                - title: "Snort Alerts"
+                  type: "logs"
+                  targets:
+                    - expr: 'rate(snort_alerts_total[5m])'
+                      legendFormat: "Alerts"
+                      refId: "A"
+                  datasource: "Prometheus"
+
+            - title: "Network Metrics"
+              panels:
+                - title: "Bandwidth Usage"
+                  type: "graph"
+                  targets:
+                    - expr: 'rate(node_network_receive_bytes_total[5m])'
+                      legendFormat: "Bandwidth Usage"
+                      refId: "B"
+                  datasource: "Prometheus"
+
+                - title: "Latency"
+                  type: "graph"
+                  targets:
+                    - expr: 'avg_over_time(node_network_receive_packets_total[5m])'
+                      legendFormat: "Latency"
+                      refId: "C"
+                  datasource: "Prometheus"
+        overwrite: true
