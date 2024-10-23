@@ -6,7 +6,7 @@ ArchitectureProposal
 
 **Comprehensive Strategy for Mission-Critical Infrastructure Optimization and Automation for Hermes Corp**
 
-This repository contains a detailed proposal to optimize and automate the mission-critical infrastructure of Hermes Corp. The goal is to ensure that all systems are reliable, scalable, and highly available, helping the organization operate smoothly 24/7.
+This repository contains a detailed proposal to optimize and automate the mission-critical infrastructure. The goal is to ensure that all systems are reliable, scalable, and highly available, helping the organization operate smoothly 24/7.
 
 Overview
 --------
