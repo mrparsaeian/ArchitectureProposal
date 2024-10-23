@@ -67,15 +67,6 @@ Key Areas of Focus
 How to Use This Repository
 --------------------------
 
-1. **Read the Documentation**: The proposal documentation is available in this repository to help you understand the different components of the infrastructure strategy.
-2. **Access the Code**: Automation scripts, configuration files, and playbooks are included to help implement the infrastructure changes.
-3. **Contribute**: If you want to contribute to the project, please feel free to create issues, fork the repository, and submit pull requests.
-
-Getting Started
----------------
-
-To get started with the project:
-
 1. **Clone the Repository**:
     
     ```bash
@@ -97,15 +88,6 @@ Technologies Used
 * **Database Management**: PostgreSQL, MongoDB, Redis
 * **Orchestration**: Kubernetes
 
-Contributing
-------------
-
-We welcome contributions! If you have ideas to improve the proposal or automation scripts, please follow these steps:
-
-1. **Fork the Repository**.
-2. **Create a Feature Branch**.
-3. **Commit Your Changes**.
-4. **Create a Pull Request**.
 
 License
 -------
